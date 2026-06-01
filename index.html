@@ -365,6 +365,16 @@ html, body {
 .toolbar button:disabled { opacity: 0.35; cursor: not-allowed; }
 .toolbar .sep { height: 1px; background: rgba(120,200,210,0.15); margin: 4px 0; }
 .toolbar .group-label { font-size: 9px; color: #8aa; letter-spacing: 2px; text-transform: uppercase; padding: 2px 4px; }
+.toolbar button.primary {
+  background: rgba(60,168,122,0.30); border-color: rgba(90,210,150,0.7);
+  font-weight: 700;
+}
+.toolbar button.primary:hover { background: rgba(60,168,122,0.45); }
+.toolbar .toolbar-note {
+  font-size: 9px; line-height: 1.35; color: #9ab;
+  padding: 2px 4px 0; max-width: 200px;
+}
+.toolbar .toolbar-note b { color: #cde; }
 
 /* ===== Dimensions legend ===== */
 .legend {
@@ -931,11 +941,12 @@ body:not(.read-mode):not(.locked) #modeBadge:hover { background: rgba(220,150,80
 /* ===== MODO LEITURA: esconde controles de edição/persistência ===== */
 body.read-mode #btnNewFact,
 body.read-mode #btnNew,
-body.read-mode #btnSave,
 body.read-mode #btnExport,
 body.read-mode #btnImport,
 body.read-mode #btnPublish,
-body.read-mode #btnReset {
+body.read-mode .toolbar-note,
+body.read-mode #saveSep,
+body.read-mode #saveLabel {
   display: none !important;
 }
 </style>
@@ -997,15 +1008,11 @@ body.read-mode #btnReset {
   <button id="btnTimeline">📅 Linha do tempo</button>
   <button id="btnSummary">📄 Resumo da semana</button>
   <button id="btnRecenter">⊙ Recentralizar</button>
-  <div class="sep"></div>
-  <div class="group-label">Dados</div>
-  <button id="btnSave">💾 Salvar agora</button>
-  <button id="btnExport">⬇ Exportar JSON</button>
-  <button id="btnImport">⬆ Importar JSON</button>
-  <button id="btnPublish">🔐 Exportar / Publicar protegido</button>
-  <button id="btnLoadProtected">🔓 Carregar dados protegidos</button>
-  <button id="btnPrint">🖨 Imprimir / PDF</button>
-  <button id="btnReset">⟲ Restaurar padrão</button>
+  <div class="sep" id="saveSep"></div>
+  <div class="group-label" id="saveLabel">Salvar</div>
+  <button id="btnPublish" class="primary">☁ Salvar</button>
+  <button id="btnExport">⬆ Exportar cópia (.json)</button>
+  <button id="btnImport">⬇ Importar (.json)</button>
   <input type="file" id="fileInput" accept="application/json" style="display:none">
 </div>
 
@@ -2336,7 +2343,6 @@ document.getElementById('btnRecenter').onclick = () => {
   applyTransform();
 };
 
-document.getElementById('btnSave').onclick = () => { saveState(); showBanner('Salvo no navegador'); };
 
 document.getElementById('btnExport').onclick = () => {
   const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
@@ -2414,74 +2420,6 @@ async function decryptProtected(encBuffer, password) {
   const content = bytes.subarray(4 + nameLen);
   return new TextDecoder().decode(content);
 }
-
-document.getElementById('btnLoadProtected').onclick = () => {
-  if (!window.isSecureContext || !(window.crypto && window.crypto.subtle)) {
-    alert('A descriptografia exige um contexto seguro (HTTPS ou localhost).');
-    return;
-  }
-  modalContent.innerHTML = `
-    <h2>🔓 Carregar dados protegidos</h2>
-    <div class="modal-subtitle">Os dados são descriptografados localmente, no seu navegador.
-      Nada é enviado para a internet. Carregados apenas nesta sessão (não sobrescrevem o salvo).</div>
-    <div class="form-group">
-      <label>Senha</label>
-      <input type="password" id="lp-pw" placeholder="Senha secreta" style="width:100%" autocomplete="off">
-    </div>
-    <div id="lp-error" style="display:none;color:#ff9b8a;font-size:13px;margin:-4px 0 8px"></div>
-    <div class="modal-actions">
-      <button id="lp-load" style="background:#0a1a48;color:#fff8e1">Descriptografar e carregar</button>
-      <button id="lp-cancel">Cancelar</button>
-    </div>
-  `;
-  modalBackdrop.classList.add('active');
-  setTimeout(() => document.getElementById('lp-pw').focus(), 50);
-
-  const pwInput = document.getElementById('lp-pw');
-  const errEl = document.getElementById('lp-error');
-  const loadBtn = document.getElementById('lp-load');
-  const showErr = (msg) => { errEl.textContent = msg; errEl.style.display = 'block'; };
-
-  document.getElementById('lp-cancel').onclick = closeModal;
-
-  async function doLoad() {
-    const password = pwInput.value;
-    if (!password) { showErr('Digite a senha.'); return; }
-    errEl.style.display = 'none';
-    loadBtn.disabled = true;
-    loadBtn.textContent = 'Descriptografando...';
-    try {
-      const resp = await fetch(PROTECTED_FILE, { cache: 'no-store' });
-      if (!resp.ok) throw new Error('FETCH');
-      const buffer = await resp.arrayBuffer();
-      const jsonText = await decryptProtected(buffer, password);
-      const data = JSON.parse(jsonText);
-      if (!data || !data.nodes) throw new Error('CORRUPT');
-      // Carrega só na sessão: NÃO chama saveState()
-      state = migrateData(data);
-      state.nodes.forEach(n => { if (n.rotation === undefined) {
-        let h = 0; for (let i = 0; i < n.id.length; i++) h = (h * 31 + n.id.charCodeAt(i)) | 0;
-        n.rotation = ((Math.abs(h) % 80) / 10) - 4;
-      }});
-      renderCards();
-      renderStrings();
-      renderLegend();
-      if (typeof renderTodayBanner === 'function') renderTodayBanner();
-      closeModal();
-      showBanner('Dados protegidos carregados (apenas nesta sessão)');
-    } catch (err) {
-      loadBtn.disabled = false;
-      loadBtn.textContent = 'Descriptografar e carregar';
-      if (err.message === 'AUTH') showErr('Senha incorreta ou arquivo corrompido.');
-      else if (err.message === 'FETCH') showErr('Não foi possível baixar o arquivo protegido.');
-      else if (err.message === 'CORRUPT') showErr('Arquivo inválido ou corrompido.');
-      else showErr('Erro inesperado ao carregar.');
-    }
-  }
-
-  loadBtn.onclick = doLoad;
-  pwInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doLoad(); });
-};
 
 // ============================================================
 // EXPORTAR / PUBLICAR PROTEGIDO (.enc)
@@ -2701,18 +2639,6 @@ document.getElementById('btnPublish').onclick = () => {
 
   exportBtn.onclick = doExport;
   publishBtn.onclick = doPublish;
-};
-
-document.getElementById('btnPrint').onclick = () => window.print();
-
-document.getElementById('btnReset').onclick = () => {
-  if (!confirm('Apagar tudo e voltar ao padrão? (suas alterações serão perdidas)')) return;
-  state = defaultData();
-  saveState();
-  renderCards();
-  renderStrings();
-  renderLegend();
-  showBanner('Restaurado');
 };
 
 // ============================================================
@@ -3062,17 +2988,8 @@ document.getElementById('modeBadge').addEventListener('click', toggleMode);
 
 function unlockAndRender(encData, mode) {
   view.mode = (mode === 'read') ? 'read' : 'edit';
-  // Prefere o cache local (edições desta máquina) se existir; senão, o .enc.
-  let chosen = encData;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const local = JSON.parse(raw);
-      if (local && local.nodes) chosen = local;
-    }
-  } catch(e) {}
-
-  state = migrateData(chosen);
+  // O login sempre carrega a versão publicada (.enc do GitHub), não o localStorage.
+  state = migrateData(encData);
   state.nodes.forEach(n => { if (n.rotation === undefined) {
     let h = 0; for (let i = 0; i < n.id.length; i++) h = (h * 31 + n.id.charCodeAt(i)) | 0;
     n.rotation = ((Math.abs(h) % 80) / 10) - 4;
