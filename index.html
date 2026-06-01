@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mapa Mental - Como minha cabeça funciona</title>
+<title>Mappa Mentis · Ni</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Caveat:wght@600;700&family=Special+Elite&display=swap" rel="stylesheet">
@@ -696,7 +696,30 @@ html, body {
   border-radius: 3px;
 }
 .timeline-filters button.active { background: rgba(220,150,80,0.4); border-color: rgba(255,180,100,0.8); }
+.timeline-controls {
+  max-width: 760px; margin: 10px auto 0;
+  display: flex; gap: 18px; align-items: center; flex-wrap: wrap;
+  font-family: 'Special Elite', monospace; font-size: 12px; color: #cfe;
+}
+.timeline-controls .tl-ctrl-label { color: #8aa; margin-right: 6px; }
+.timeline-controls .tl-group { display: flex; align-items: center; gap: 6px; }
+.timeline-controls .tl-group button {
+  background: rgba(255,255,255,0.08); color: #f4ecd8;
+  border: 1px solid rgba(120,200,210,0.3); padding: 5px 11px;
+  font-family: 'Special Elite', monospace; font-size: 12px; cursor: pointer; border-radius: 3px;
+}
+.timeline-controls .tl-group button.active { background: rgba(220,150,80,0.4); border-color: rgba(255,180,100,0.8); }
+.timeline-controls .tl-dim { display: flex; align-items: center; gap: 6px; color: #8aa; }
+.timeline-controls .tl-dim select {
+  background: rgba(255,255,255,0.08); color: #f4ecd8;
+  border: 1px solid rgba(120,200,210,0.3); padding: 5px 8px;
+  font-family: 'Special Elite', monospace; font-size: 12px; border-radius: 3px;
+}
 .timeline-list { max-width: 760px; margin: 0 auto; }
+.timeline-dim-header {
+  font-family: 'Permanent Marker', cursive; font-size: 15px;
+  margin: 20px 0 8px; padding-left: 10px; border-left: 4px solid #888;
+}
 .timeline-day-header {
   font-family: 'Permanent Marker', cursive;
   font-size: 15px;
@@ -753,119 +776,6 @@ html, body {
   font-style: italic;
 }
 
-/* ===== Summary report (PDF) ===== */
-.summary-view {
-  position: fixed;
-  inset: 0;
-  background: #fafaf5;
-  color: #1a1108;
-  z-index: 90;
-  overflow-y: auto;
-  padding: 40px 20px;
-  font-family: Georgia, serif;
-  display: none;
-}
-.summary-view.active { display: block; }
-.summary-view .summary-controls {
-  position: fixed;
-  top: 16px;
-  right: 16px;
-  display: flex;
-  gap: 8px;
-  z-index: 91;
-}
-.summary-view .summary-controls button {
-  font-family: Georgia, serif;
-  padding: 8px 14px;
-  border: 1px solid #333;
-  background: white;
-  cursor: pointer;
-  border-radius: 2px;
-}
-.summary-view .summary-content {
-  max-width: 720px;
-  margin: 0 auto;
-  background: white;
-  padding: 50px 60px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-}
-.summary-view h1 {
-  font-size: 24px;
-  margin-bottom: 4px;
-}
-.summary-view .summary-subtitle {
-  font-size: 13px;
-  color: #555;
-  border-bottom: 2px solid #333;
-  padding-bottom: 12px;
-  margin-bottom: 20px;
-}
-.summary-view h2 {
-  font-size: 16px;
-  margin-top: 28px;
-  margin-bottom: 8px;
-  background: #f0eee5;
-  padding: 6px 12px;
-  border-left: 3px solid #6a4810;
-}
-.summary-view .summary-stats {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-.summary-view .stat-box {
-  border: 1px solid #d0d0c8;
-  padding: 12px;
-  text-align: center;
-  background: #faf8f0;
-}
-.summary-view .stat-box b {
-  display: block;
-  font-size: 22px;
-  margin-bottom: 2px;
-}
-.summary-view .stat-box small {
-  font-size: 9px;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-.summary-view .pattern-section { margin-bottom: 20px; }
-.summary-view .pattern-section .pat-meta {
-  font-size: 11px;
-  color: #666;
-  margin-bottom: 8px;
-  font-style: italic;
-}
-.summary-view .episode {
-  border-left: 3px solid #c8302a;
-  padding: 8px 12px;
-  margin-bottom: 8px;
-  background: #fafafa;
-  font-size: 13px;
-  page-break-inside: avoid;
-}
-.summary-view .episode .ep-date {
-  font-size: 10px;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-.summary-view .episode .ep-title { font-weight: bold; margin: 2px 0; }
-.summary-view .episode .ep-text { margin-top: 4px; }
-.summary-view .episode .ep-fields { font-size: 12px; margin-top: 4px; }
-.summary-view .episode .ep-fields > div { margin-top: 3px; }
-.summary-view .episode .ep-fields b { color: #555; font-weight: normal; }
-.summary-view .summary-foot {
-  margin-top: 40px;
-  font-size: 11px;
-  color: #888;
-  text-align: center;
-  border-top: 1px solid #ccc;
-  padding-top: 12px;
-}
-
 /* print: hide UI chrome */
 @media print {
   body { background: white; }
@@ -873,9 +783,6 @@ html, body {
   .viewport::before { display: none; }
   .toolbar, .legend, .help, .zoom-indicator, .banner, .modal-backdrop, .today-banner, .timeline-view { display: none !important; }
   .board { transform: none !important; position: relative; }
-  .summary-view { position: static; padding: 0; }
-  .summary-view .summary-controls { display: none !important; }
-  .summary-view .summary-content { box-shadow: none; padding: 20px 30px; max-width: 100%; }
 }
 
 /* ===== GATE DE SENHA ===== */
@@ -956,10 +863,10 @@ body.read-mode #saveLabel {
 <!-- GATE DE SENHA: bloqueia todo o app até descriptografar o .enc -->
 <div id="lockGate">
   <div id="lockBox">
-    <h1>🔒 Mapa Mental</h1>
-    <p>Os dados são protegidos por criptografia. Digite a senha para descriptografar
-       localmente — nada é enviado para a internet.</p>
-    <input type="password" id="gate-pw" placeholder="Senha secreta" autocomplete="off">
+    <h1>🧭 Mappa Mentis · Ni</h1>
+    <p>Acesso protegido. Informe sua senha para descriptografar localmente —
+       nada é enviado para a internet.</p>
+    <input type="password" id="gate-pw" placeholder="Senha" autocomplete="off">
     <div id="gate-error"></div>
     <div id="gate-buttons">
       <button id="gate-read">👁 Entrar no modo leitura</button>
@@ -979,17 +886,20 @@ body.read-mode #saveLabel {
       <button data-filter="all">Tudo</button>
       <button data-filter="back" style="margin-left:auto;background:rgba(120,200,210,0.15)">← Voltar ao mapa</button>
     </div>
+    <div class="timeline-controls">
+      <div class="tl-group" id="timelineGroup">
+        <span class="tl-ctrl-label">Agrupar:</span>
+        <button data-group="day" class="active">Por dia</button>
+        <button data-group="dim">Por categoria</button>
+      </div>
+      <label class="tl-dim">Categoria:
+        <select id="timelineDim"><option value="">Todas</option></select>
+      </label>
+    </div>
   </div>
   <div class="timeline-list" id="timelineList"></div>
 </div>
 
-<div class="summary-view" id="summaryView">
-  <div class="summary-controls">
-    <button id="btnSummaryPrint">🖨 Imprimir / PDF</button>
-    <button id="btnSummaryClose">← Fechar</button>
-  </div>
-  <div class="summary-content" id="summaryContent"></div>
-</div>
 
 <div class="legend" id="legend">
   <h4>Dimensões</h4>
@@ -1006,7 +916,6 @@ body.read-mode #saveLabel {
   <div class="sep"></div>
   <div class="group-label">Visualizar</div>
   <button id="btnTimeline">📅 Linha do tempo</button>
-  <button id="btnSummary">📄 Resumo da semana</button>
   <button id="btnRecenter">⊙ Recentralizar</button>
   <div class="sep" id="saveSep"></div>
   <div class="group-label" id="saveLabel">Salvar</div>
@@ -2728,15 +2637,53 @@ function quickCaptureEpisode() {
 const timelineView = document.getElementById('timelineView');
 const timelineList = document.getElementById('timelineList');
 const timelineFilters = document.getElementById('timelineFilters');
+const timelineGroup = document.getElementById('timelineGroup');
+const timelineDimSel = document.getElementById('timelineDim');
+
+// Popula o seletor de categoria com as dimensões em uso pelos episódios.
+function populateTimelineDimSelect() {
+  const used = new Set();
+  state.nodes.filter(n => n.kind === 'fact' && n.dimension).forEach(n => used.add(n.dimension));
+  const current = view.timelineDim || '';
+  let opts = '<option value="">Todas</option>';
+  DIMENSIONS.filter(d => used.has(d.id)).forEach(d => {
+    opts += `<option value="${d.id}" ${current === d.id ? 'selected' : ''}>${escapeHtml(d.label)}</option>`;
+  });
+  timelineDimSel.innerHTML = opts;
+  if (![...used].includes(current)) view.timelineDim = ''; // dimensão filtrada sumiu
+}
 
 function openTimeline() {
   timelineView.classList.add('active');
+  populateTimelineDimSelect();
   renderTimeline();
 }
 function closeTimeline() { timelineView.classList.remove('active'); }
 
+// Renderiza um cartão de episódio (reusado nos modos por-dia e por-categoria).
+function timelineEntryHtml(f) {
+  const linked = patternsLinkedTo(f.id);
+  return `
+    <div class="timeline-entry" data-id="${f.id}">
+      <div class="te-date">${escapeHtml(f.fact?.date || '')}</div>
+      <div class="te-title">${escapeHtml(f.title)}</div>
+      ${f.fact?.text ? `<div class="te-text">${escapeHtml(f.fact.text)}</div>` : ''}
+      <div class="te-meta">
+        ${f.fact?.intensity ? `<span>★ ${f.fact.intensity}/5</span>` : ''}
+        ${f.fact?.frequency ? `<span>${escapeHtml(f.fact.frequency)}</span>` : ''}
+        ${f.fact?.trigger ? `<span>gatilho ✓</span>` : ''}
+        ${f.fact?.body ? `<span>corpo ✓</span>` : ''}
+        ${f.fact?.helped ? `<span>ajudou ✓</span>` : ''}
+      </div>
+      ${linked.length ? `<div class="te-patterns">→ ${linked.map(p => escapeHtml(p.title)).join(' · ')}</div>` : ''}
+    </div>
+  `;
+}
+
 function renderTimeline() {
   const filter = view.timelineFilter || 'week';
+  const groupBy = view.timelineGroup || 'day';
+  const dimFilter = view.timelineDim || '';
   const now = new Date();
   let cutoff = null;
   if (filter === 'week') cutoff = new Date(now.getTime() - 7*24*3600*1000);
@@ -2745,46 +2692,51 @@ function renderTimeline() {
   const facts = state.nodes.filter(n => n.kind === 'fact');
   const withDates = facts.map(f => ({ f, d: parseDateStr(f.fact?.date) || new Date(0) }))
     .filter(x => !cutoff || x.d >= cutoff)
+    .filter(x => !dimFilter || x.f.dimension === dimFilter)
     .sort((a,b) => b.d - a.d);
 
   if (!withDates.length) {
-    timelineList.innerHTML = `<div class="timeline-empty">Nenhum episódio nesse período.<br><br>Clique em "+ Registrar agora" no banner do topo, ou pressione <b>N</b>.</div>`;
+    timelineList.innerHTML = `<div class="timeline-empty">Nenhum episódio nesse período${dimFilter ? ' nessa categoria' : ''}.<br><br>Clique em "+ Registrar agora" no banner do topo, ou pressione <b>N</b>.</div>`;
     return;
   }
 
-  // group by day
-  const groups = {};
-  withDates.forEach(({f, d}) => {
-    const key = d.getTime() ? d.toDateString() : 'sem data';
-    if (!groups[key]) groups[key] = { date: d, items: [] };
-    groups[key].items.push(f);
-  });
-
   let html = '';
-  Object.values(groups).forEach(g => {
-    const dayLabel = g.date.getTime()
-      ? g.date.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' })
-      : 'sem data';
-    html += `<div class="timeline-day-header">${escapeHtml(dayLabel)}</div>`;
-    g.items.forEach(f => {
-      const linked = patternsLinkedTo(f.id);
-      html += `
-        <div class="timeline-entry" data-id="${f.id}">
-          <div class="te-date">${escapeHtml(f.fact?.date || '')}</div>
-          <div class="te-title">${escapeHtml(f.title)}</div>
-          ${f.fact?.text ? `<div class="te-text">${escapeHtml(f.fact.text)}</div>` : ''}
-          <div class="te-meta">
-            ${f.fact?.intensity ? `<span>★ ${f.fact.intensity}/5</span>` : ''}
-            ${f.fact?.frequency ? `<span>${escapeHtml(f.fact.frequency)}</span>` : ''}
-            ${f.fact?.trigger ? `<span>gatilho ✓</span>` : ''}
-            ${f.fact?.body ? `<span>corpo ✓</span>` : ''}
-            ${f.fact?.helped ? `<span>ajudou ✓</span>` : ''}
-          </div>
-          ${linked.length ? `<div class="te-patterns">→ ${linked.map(p => escapeHtml(p.title)).join(' · ')}</div>` : ''}
-        </div>
-      `;
+
+  if (groupBy === 'dim') {
+    // Agrupa por dimensão/categoria do episódio
+    const groups = {};
+    withDates.forEach(({f}) => {
+      const key = f.dimension || '';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(f);
     });
-  });
+    // ordena categorias por nº de episódios (desc)
+    Object.entries(groups)
+      .sort((a,b) => b[1].length - a[1].length)
+      .forEach(([dimId, items]) => {
+        const dim = dimId ? dimById(dimId) : null;
+        const label = dim ? dim.label : 'Sem categoria';
+        const color = dim ? dim.color : '#888';
+        html += `<div class="timeline-dim-header" style="border-left-color:${color};color:${color}">${escapeHtml(label)} <span style="font-size:11px;color:#8aa">· ${items.length} episódio${items.length===1?'':'s'}</span></div>`;
+        items.forEach(f => { html += timelineEntryHtml(f); });
+      });
+  } else {
+    // Agrupa por dia
+    const groups = {};
+    withDates.forEach(({f, d}) => {
+      const key = d.getTime() ? d.toDateString() : 'sem data';
+      if (!groups[key]) groups[key] = { date: d, items: [] };
+      groups[key].items.push(f);
+    });
+    Object.values(groups).forEach(g => {
+      const dayLabel = g.date.getTime()
+        ? g.date.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' })
+        : 'sem data';
+      html += `<div class="timeline-day-header">${escapeHtml(dayLabel)}</div>`;
+      g.items.forEach(f => { html += timelineEntryHtml(f); });
+    });
+  }
+
   timelineList.innerHTML = html;
 
   document.querySelectorAll('.timeline-entry').forEach(el => {
@@ -2807,126 +2759,32 @@ timelineFilters.addEventListener('click', e => {
   renderTimeline();
 });
 
-// ============================================================
-// SUMMARY (pré-sessão)
-// ============================================================
-const summaryView = document.getElementById('summaryView');
-const summaryContent = document.getElementById('summaryContent');
+// Alternar agrupamento: por dia / por categoria
+timelineGroup.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  view.timelineGroup = b.dataset.group;
+  timelineGroup.querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+  renderTimeline();
+});
 
-function openSummary() {
-  const defaultSince = state.lastSession || (() => {
-    const d = new Date(); d.setDate(d.getDate() - 28);
-    return d.toISOString().slice(0,10);
-  })();
-  const input = prompt('Data da última sessão (ou de quando começar o resumo)?\n\nFormato: AAAA-MM-DD (ex: 2026-05-01)', defaultSince);
-  if (!input) return;
-  const since = parseDateStr(input);
-  if (!since) { alert('Data inválida.'); return; }
-  state.lastSession = input;
-  saveState();
-  renderSummary(since);
-  summaryView.classList.add('active');
-}
+// Filtrar por categoria/dimensão
+timelineDimSel.addEventListener('change', () => {
+  view.timelineDim = timelineDimSel.value;
+  renderTimeline();
+});
 
-function closeSummary() { summaryView.classList.remove('active'); }
-
-function renderSummary(since) {
-  const now = new Date();
-  const facts = state.nodes.filter(n => n.kind === 'fact');
-  const withDates = facts.map(f => ({ f, d: parseDateStr(f.fact?.date) }))
-    .filter(x => x.d && x.d >= since)
-    .sort((a,b) => a.d - b.d);
-
-  // stats
-  const total = withDates.length;
-  const avgInt = total ? (withDates.reduce((s,x)=>s+(x.f.fact.intensity||0),0)/total).toFixed(1) : '–';
-  const highInt = withDates.filter(x => x.f.fact.intensity >= 4).length;
-  const days = Math.max(1, Math.ceil((now - since) / (24*3600*1000)));
-
-  // group by pattern
-  const byPattern = {};
-  const unlinked = [];
-  withDates.forEach(({f, d}) => {
-    const patterns = patternsLinkedTo(f.id);
-    if (!patterns.length) unlinked.push({f, d});
-    else patterns.forEach(p => {
-      if (!byPattern[p.id]) byPattern[p.id] = { pattern: p, items: [] };
-      byPattern[p.id].items.push({f, d});
-    });
-  });
-
-  const patternOrder = Object.values(byPattern).sort((a,b) => b.items.length - a.items.length);
-
-  let html = `
-    <h1>Resumo — entre sessões</h1>
-    <div class="summary-subtitle">
-      Período: ${formatDateBr(since)} a ${formatDateBr(now)} · ${days} dia${days===1?'':'s'} · gerado em ${formatDateBr(now)}
-    </div>
-    <div class="summary-stats">
-      <div class="stat-box"><b>${total}</b><small>Episódios</small></div>
-      <div class="stat-box"><b>${avgInt}</b><small>Intensidade média</small></div>
-      <div class="stat-box"><b>${highInt}</b><small>Episódios intensos (≥4)</small></div>
-      <div class="stat-box"><b>${patternOrder.length}</b><small>Padrões ativos</small></div>
-    </div>
-    <p style="font-size:12px;color:#666;font-style:italic;margin-bottom:20px">
-      Registros descritivos de momentos observados. Sem hipótese diagnóstica — material para conversa.
-    </p>
-  `;
-
-  if (!total) {
-    html += '<p style="text-align:center;color:#888;padding:20px">Nenhum episódio registrado nesse período.</p>';
-  }
-
-  patternOrder.forEach(({pattern, items}) => {
-    const avg = (items.reduce((s,x)=>s+(x.f.fact.intensity||0),0)/items.length).toFixed(1);
-    html += `
-      <h2>${escapeHtml(pattern.title)}</h2>
-      <div class="pattern-section">
-        <div class="pat-meta">${items.length} episódio${items.length===1?'':'s'} · intensidade média ${avg}/5</div>
-        ${items.map(({f, d}) => episodeBlockHtml(f, d)).join('')}
-      </div>
-    `;
-  });
-
-  if (unlinked.length) {
-    html += `<h2>Não ligados a padrão</h2><div class="pattern-section">`;
-    html += unlinked.map(({f,d}) => episodeBlockHtml(f, d)).join('');
-    html += `</div>`;
-  }
-
-  html += `<div class="summary-foot">Gerado a partir do "Mapa Mental — Como minha cabeça funciona"</div>`;
-  summaryContent.innerHTML = html;
-}
-
-function episodeBlockHtml(f, d) {
-  const fact = f.fact || {};
-  return `
-    <div class="episode">
-      <div class="ep-date">${escapeHtml(fact.date || formatDateBr(d))} ${fact.intensity ? `· intensidade ${fact.intensity}/5` : ''} ${fact.frequency ? `· ${escapeHtml(fact.frequency)}` : ''}</div>
-      <div class="ep-title">${escapeHtml(f.title)}</div>
-      ${fact.text ? `<div class="ep-text">${escapeHtml(fact.text)}</div>` : ''}
-      <div class="ep-fields">
-        ${fact.trigger ? `<div><b>Gatilho:</b> ${escapeHtml(fact.trigger)}</div>` : ''}
-        ${fact.body ? `<div><b>Corpo/sentimento:</b> ${escapeHtml(fact.body)}</div>` : ''}
-        ${fact.helped ? `<div><b>O que ajudou:</b> ${escapeHtml(fact.helped)}</div>` : ''}
-      </div>
-    </div>
-  `;
-}
-
-document.getElementById('btnSummaryPrint').onclick = () => window.print();
-document.getElementById('btnSummaryClose').onclick = closeSummary;
 
 // ============================================================
 // TOOLBAR — extra buttons
 // ============================================================
 document.getElementById('btnTimeline').onclick = openTimeline;
-document.getElementById('btnSummary').onclick = openSummary;
 
 // ============================================================
 // KEYBOARD SHORTCUTS
 // ============================================================
 view.timelineFilter = 'week';
+view.timelineGroup = 'day';
+view.timelineDim = '';
 
 document.addEventListener('keydown', (e) => {
   // ignora atalhos em inputs/textareas
@@ -2934,7 +2792,6 @@ document.addEventListener('keydown', (e) => {
 
   if (e.key === 'Escape') {
     if (modalBackdrop.classList.contains('active')) { closeModal(); return; }
-    if (summaryView.classList.contains('active')) { closeSummary(); return; }
     if (timelineView.classList.contains('active')) { closeTimeline(); return; }
   }
 
