@@ -500,6 +500,38 @@ html, body {
   border-bottom: 2px dashed rgba(0,0,0,0.2);
   padding-bottom: 10px;
 }
+/* Resumo do padrão (descrição em destaque) */
+.modal .pattern-summary {
+  background: rgba(10,30,72,0.06);
+  border-left: 3px solid #0a1a48;
+  padding: 12px 16px;
+  margin-bottom: 14px;
+  font-size: 15px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+/* Cabeçalho de seção dentro do modal (Observações / Perguntas) */
+.modal .section-head {
+  font-family: 'Permanent Marker', cursive;
+  font-size: 14px;
+  color: #6a4810;
+  margin: 16px 0 8px;
+}
+/* Perguntas → respostas (visão) */
+.modal .qa {
+  background: rgba(255,255,255,0.45);
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  border-left: 3px solid #3a7ec8;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.modal .qa-q { font-weight: bold; color: #0a1a48; }
+.modal .qa-a { margin-top: 4px; white-space: pre-wrap; }
+.modal .qa-a.empty { color: #4a5a80; font-style: italic; }
+/* Form de pergunta (editor) */
+.modal .q-form { border-left-color: #3a7ec8; }
+
 .modal .obs {
   background: rgba(255,255,255,0.45);
   padding: 10px 14px;
@@ -617,7 +649,8 @@ html, body {
   margin-top: 6px;
 }
 .obs-form .row.full { grid-template-columns: 1fr; }
-.obs-form button.remove-obs {
+.obs-form button.remove-obs,
+.obs-form button.remove-q {
   background: rgba(168,59,42,0.15);
   border: none;
   color: #a83b2a;
@@ -981,12 +1014,6 @@ const SEED_DIMENSIONS = [
 ];
 let DIMENSIONS = SEED_DIMENSIONS.slice();
 
-function rebuildDimensions() {
-  DIMENSIONS = (state && state.dimensions && state.dimensions.length)
-    ? state.dimensions.slice()
-    : SEED_DIMENSIONS.slice();
-}
-
 const FREQUENCIES = ['diário', 'semanal', 'situacional', 'raro', 'crônico'];
 
 // ============================================================
@@ -1073,6 +1100,10 @@ function migrateData(d) {
     if (!n.dimension) n.dimension = 'sintese';
     if (!n.observations) n.observations = [];
     if (!n.kind) n.kind = 'pattern';
+    if (n.kind !== 'fact' && n.kind !== 'dimension') {
+      if (typeof n.summary !== 'string') n.summary = '';
+      if (!Array.isArray(n.questions)) n.questions = [];
+    }
     if (n.kind === 'fact') {
       if (!n.fact) n.fact = { date: '', text: '', intensity: 3, frequency: 'situacional' };
       if (n.fact.trigger === undefined) n.fact.trigger = '';
@@ -1204,6 +1235,11 @@ const fileInput = document.getElementById('fileInput');
 // HELPERS
 // ============================================================
 function dimById(id) { return DIMENSIONS.find(d => d.id === id) || DIMENSIONS[DIMENSIONS.length-1]; }
+
+// Bolinha colorida de dimensão (reusada nos cabeçalhos dos modais).
+function dimColorDot(color, size = 10) {
+  return `<span style="display:inline-block;width:${size}px;height:${size}px;border-radius:50%;background:${color};margin-right:6px;vertical-align:middle"></span>`;
+}
 function nodeById(id) { return state.nodes.find(n => n.id === id); }
 function escapeHtml(s) {
   return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1735,7 +1771,16 @@ function renderModalView(n) {
   if (n.kind === 'fact') return renderFactModalView(n);
   if (n.kind === 'dimension') return renderDimensionModalView(n);
   const d = dimById(n.dimension);
-  const obsHtml = (n.observations || []).map(o => `
+
+  // Resumo (descrição em destaque)
+  const summaryHtml = n.summary
+    ? `<div class="pattern-summary">${escapeHtml(n.summary)}</div>`
+    : (view.mode === 'edit'
+        ? '<p style="color:#4a5a80;font-style:italic">Sem resumo ainda — clique em Editar para escrever uma descrição.</p>'
+        : '');
+
+  // Observações (seção secundária; só aparece se houver)
+  const obsItems = (n.observations || []).map(o => `
     <div class="obs">
       <div>${o.valence ? `<span class="valence-dot ${o.valence}" title="${o.valence}"></span>` : ''}${escapeHtml(o.text)}</div>
       <div class="obs-meta">
@@ -1745,7 +1790,20 @@ function renderModalView(n) {
         ${o.since ? `<span>desde: ${escapeHtml(o.since)}</span>` : ''}
       </div>
     </div>
-  `).join('') || '<p style="color:#4a5a80;font-style:italic">Sem observações ainda — clique em Editar para adicionar.</p>';
+  `).join('');
+  const obsHtml = obsItems
+    ? `<h3 class="section-head">Observações</h3>${obsItems}`
+    : '';
+
+  // Perguntas reflexivas → respostas
+  const questionsHtml = (n.questions && n.questions.length)
+    ? `<h3 class="section-head">Perguntas</h3>` + n.questions.map(item => `
+        <div class="qa">
+          <div class="qa-q">${escapeHtml(item.q)}</div>
+          <div class="qa-a${item.a ? '' : ' empty'}">${item.a ? escapeHtml(item.a) : '—'}</div>
+        </div>
+      `).join('')
+    : '';
 
   const facts = factsLinkedTo(n.id);
   const factsHtml = facts.length ? `
@@ -1768,10 +1826,12 @@ function renderModalView(n) {
   modalContent.innerHTML = `
     <h2>${escapeHtml(n.title)}</h2>
     <div class="modal-subtitle">
-      <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${d.color};margin-right:6px;vertical-align:middle"></span>
+      ${dimColorDot(d.color, 10)}
       ${escapeHtml(d.label)} · padrão
     </div>
+    ${summaryHtml}
     ${obsHtml}
+    ${questionsHtml}
     ${factsHtml}
     <div class="modal-actions">
       ${view.mode === 'edit' ? `<button id="btnEdit">✏ Editar</button>
@@ -1823,7 +1883,7 @@ function renderDimensionModalView(n) {
   modalContent.innerHTML = `
     <h2>${escapeHtml(n.title)}</h2>
     <div class="modal-subtitle">
-      <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${d.color};margin-right:6px;vertical-align:middle"></span>
+      ${dimColorDot(d.color, 12)}
       Dimensão · ${patterns.length} padrão${patterns.length===1?'':'s'} ligado${patterns.length===1?'':'s'}
     </div>
     ${patternsHtml}
@@ -1863,7 +1923,7 @@ function renderFactModalView(n) {
   modalContent.innerHTML = `
     <h2 style="font-family:'Caveat';font-size:30px">${escapeHtml(n.title)}</h2>
     <div class="modal-subtitle">
-      <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${d.color};margin-right:6px;vertical-align:middle"></span>
+      ${dimColorDot(d.color, 10)}
       ${escapeHtml(d.label)} · episódio
       ${fact.date ? ` · <span style="color:#6a4810">${escapeHtml(fact.date)}</span>` : ''}
     </div>
@@ -1942,6 +2002,7 @@ function renderModalEdit(n) {
     </label>
   `).join('');
   const obsHtml = (n.observations || []).map((o, i) => obsFormHtml(o, i)).join('');
+  const questionsHtml = (n.questions || []).map((item, i) => questionFormHtml(item, i)).join('');
 
   modalContent.innerHTML = `
     <h2>${isNew ? 'Novo card' : 'Editar: ' + escapeHtml(n.title)}</h2>
@@ -1953,6 +2014,15 @@ function renderModalEdit(n) {
     <div class="form-group">
       <label>Dimensões (pode marcar mais de uma)</label>
       <div id="dim-checks" style="background:rgba(255,255,255,0.3);padding:8px">${dimChecks}</div>
+    </div>
+    <div class="form-group">
+      <label>Resumo / descrição</label>
+      <textarea id="f-summary" rows="4" style="width:100%;resize:vertical">${escapeHtml(n.summary || '')}</textarea>
+    </div>
+    <div class="form-group">
+      <label>Perguntas reflexivas</label>
+      <div id="q-list">${questionsHtml}</div>
+      <button id="btnAddQuestion" style="margin-top:6px;font-family:'Special Elite';font-size:11px;padding:6px 10px;background:rgba(10,30,72,0.1);border:1px dashed #0a1a48;color:#0a1a48;cursor:pointer;border-radius:2px">+ Adicionar pergunta</button>
     </div>
     <div class="form-group">
       <label>Observações</label>
@@ -1977,10 +2047,32 @@ function renderModalEdit(n) {
       renderModalEdit(n);
     };
   });
+
+  // Captura o que está nos inputs de pergunta antes de re-renderizar (não perde digitação)
+  function syncQuestionsFromForm() {
+    n.questions = (n.questions || []).map((item, i) => ({
+      q: document.querySelector(`[data-q-text="${i}"]`)?.value ?? item.q,
+      a: document.querySelector(`[data-q-ans="${i}"]`)?.value ?? item.a
+    }));
+  }
+  document.getElementById('btnAddQuestion').onclick = () => {
+    syncQuestionsFromForm();
+    n.questions = n.questions || [];
+    n.questions.push({ q:'', a:'' });
+    renderModalEdit(n);
+  };
+  document.querySelectorAll('.remove-q').forEach(b => {
+    b.onclick = () => {
+      syncQuestionsFromForm();
+      n.questions.splice(+b.dataset.idx, 1);
+      renderModalEdit(n);
+    };
+  });
   document.getElementById('btnSaveCard').onclick = () => {
     n.title = document.getElementById('f-title').value.trim() || 'Sem título';
     const selectedDims = Array.from(document.querySelectorAll('#dim-checks input:checked')).map(i => i.dataset.dim);
     n.dimension = selectedDims[0] || ''; // primária (fallback)
+    n.summary = document.getElementById('f-summary').value.trim();
     n.observations = (n.observations || []).map((o, i) => ({
       text: document.querySelector(`[data-obs-text="${i}"]`)?.value.trim() || '',
       intensity: +(document.querySelector(`[data-obs-int="${i}"]`)?.value || 3),
@@ -1988,6 +2080,10 @@ function renderModalEdit(n) {
       valence: document.querySelector(`[data-obs-val="${i}"]`)?.value || '',
       since: document.querySelector(`[data-obs-since="${i}"]`)?.value.trim() || ''
     })).filter(o => o.text);
+    n.questions = (n.questions || []).map((item, i) => ({
+      q: (document.querySelector(`[data-q-text="${i}"]`)?.value || '').trim(),
+      a: (document.querySelector(`[data-q-ans="${i}"]`)?.value || '').trim()
+    })).filter(x => x.q || x.a);
     if (isNew) state.nodes.push(n);
 
     // garante que existam cards de dimensão pra todas selecionadas
@@ -2049,13 +2145,23 @@ function obsFormHtml(o, i) {
   `;
 }
 
+function questionFormHtml(item, i) {
+  return `
+    <div class="obs-form q-form">
+      <input type="text" data-q-text="${i}" placeholder="Pergunta..." value="${escapeHtml(item.q || '')}">
+      <textarea data-q-ans="${i}" rows="2" placeholder="Resposta..." style="width:100%;resize:vertical;margin-top:4px">${escapeHtml(item.a || '')}</textarea>
+      <button class="remove-q" data-idx="${i}">Remover pergunta</button>
+    </div>
+  `;
+}
+
 function renderDimensionEdit(n) {
   if (view.mode === 'read') return renderModalView(n);
   const d = dimById(n.dimension);
   modalContent.innerHTML = `
     <h2>Dimensão: ${escapeHtml(n.title)}</h2>
     <div class="modal-subtitle">
-      <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${d.color};margin-right:6px;vertical-align:middle"></span>
+      ${dimColorDot(d.color, 12)}
       Categoria/agrupamento.
     </div>
     <div class="form-group">
@@ -2225,7 +2331,9 @@ document.getElementById('btnNew').onclick = () => {
     x: center.x, y: center.y,
     rotation: (Math.random()*8 - 4),
     pin: Math.random() < 0.5 ? 'pin' : ('tape-' + ['tl','tr','bl','br'][Math.floor(Math.random()*4)]),
-    observations: [{ text:'', intensity:3, frequency:'situacional', since:'', example:'' }]
+    summary: '',
+    questions: [],
+    observations: []
   };
   renderModalEdit(n);
   modalBackdrop.classList.add('active');
@@ -2299,14 +2407,15 @@ const PBKDF2_ITERATIONS = 210000;
 const SALT_BYTES = 16;
 const IV_BYTES = 12;
 
-async function deriveProtectedKey(password, salt) {
+// Deriva a chave AES-GCM a partir da senha (PBKDF2-SHA-512). usage: 'encrypt' ou 'decrypt'.
+async function deriveProtectedKey(password, salt, usage = 'decrypt') {
   const baseKey = await crypto.subtle.importKey(
     'raw', new TextEncoder().encode(password),
     { name: 'PBKDF2' }, false, ['deriveKey']
   );
   return crypto.subtle.deriveKey(
     { name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-512' },
-    baseKey, { name: 'AES-GCM', length: 256 }, false, ['decrypt']
+    baseKey, { name: 'AES-GCM', length: 256 }, false, [usage]
   );
 }
 
@@ -2350,18 +2459,6 @@ function getSaved(key) { try { return localStorage.getItem(key) || ''; } catch(e
 function setSaved(key, val) { try { localStorage.setItem(key, val); } catch(e) {} }
 function clearSaved(key) { try { localStorage.removeItem(key); } catch(e) {} }
 
-// Deriva chave para CIFRAR (espelho de deriveProtectedKey, que só pede 'decrypt')
-async function deriveProtectedEncKey(password, salt) {
-  const baseKey = await crypto.subtle.importKey(
-    'raw', new TextEncoder().encode(password),
-    { name: 'PBKDF2' }, false, ['deriveKey']
-  );
-  return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-512' },
-    baseKey, { name: 'AES-GCM', length: 256 }, false, ['encrypt']
-  );
-}
-
 // Cifra o state -> ArrayBuffer [ salt 16B | iv 12B | ciphertext ]
 async function encryptProtected(stateObj, password) {
   const jsonText = JSON.stringify(stateObj, null, 2);
@@ -2377,7 +2474,7 @@ async function encryptProtected(stateObj, password) {
 
   const salt = crypto.getRandomValues(new Uint8Array(SALT_BYTES));
   const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES));
-  const key = await deriveProtectedEncKey(password, salt);
+  const key = await deriveProtectedKey(password, salt, 'encrypt');
   const cipherBuf = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext);
   const ciphertext = new Uint8Array(cipherBuf);
 
