@@ -1547,16 +1547,67 @@ function fanPosition(pattern, i, count) {
   return { x: pattern.x + R * Math.cos(ang), y: pattern.y + R * Math.sin(ang) };
 }
 
+// ----- Registro de tipos de nó --------------------------------------------
+// Fonte única de verdade por "kind": dispatch (card/modal) + flags de
+// comportamento. Adicionar um tipo novo = adicionar uma entrada aqui.
+// (As funções render* são declarações `function`, então o hoisting garante
+// que já existem quando este objeto é avaliado.)
+const NODE_TYPES = {
+  dimension: {
+    kind: 'dimension',
+    idBase: 'dim',
+    cardClass: '',
+    renderCard: renderDimensionCardContent,
+    renderView: renderDimensionModalView,
+    renderEdit: renderDimensionEdit,
+    isAnchor: true,    // fica no anel, recebe linhas pro centro
+    hostsStack: false, // não recebe pilha de episódios
+    managed: false,    // não é escondido em pilha
+    dated: false,      // não entra na timeline
+  },
+  pattern: {
+    kind: 'pattern',
+    idBase: 'node',
+    cardClass: '',
+    renderCard: renderPatternCardContent,
+    renderView: renderPatternModalView,
+    renderEdit: renderPatternEdit,
+    isAnchor: false,
+    hostsStack: true,  // só padrões hospedam pilha/leque de episódios
+    managed: false,
+    dated: false,
+  },
+  fact: {
+    kind: 'fact',
+    idBase: 'fact',
+    cardClass: 'fact',
+    renderCard: renderFactCardContent,
+    renderView: renderFactModalView,
+    renderEdit: renderFactEdit,
+    isAnchor: false,
+    hostsStack: false,
+    managed: true,     // fato ligado a um host vive na pilha dele
+    dated: true,       // tem fact.date → aparece na timeline
+  },
+};
+const DEFAULT_KIND = 'pattern';
+function nodeType(n) {
+  const k = (n && typeof n === 'object') ? n.kind : n; // aceita nó ou string
+  return NODE_TYPES[k] || NODE_TYPES[DEFAULT_KIND];
+}
+function hostsStack(n)   { return nodeType(n).hostsStack; }
+function isAnchorKind(n) { return nodeType(n).isAnchor; }
+function isDatedKind(n)  { return nodeType(n).dated; }
+
 function makeCard(n) {
+  const t = nodeType(n);
   const el = document.createElement('div');
-  el.className = 'card' + (n.type ? ' ' + n.type : '') + (n.kind === 'fact' ? ' fact' : '');
+  el.className = 'card' + (n.type ? ' ' + n.type : '') + (t.cardClass ? ' ' + t.cardClass : '');
   if (view.selectedCard === n.id) el.classList.add('selected');
   if (view.connectSource === n.id) el.classList.add('connect-source');
   el.dataset.id = n.id;
   el.style.transform = `translate(-50%, -50%)`;
-  if (n.kind === 'fact') renderFactCardContent(el, n);
-  else if (n.kind === 'dimension') renderDimensionCardContent(el, n);
-  else renderPatternCardContent(el, n);
+  t.renderCard(el, n);
   return el;
 }
 function placeCard(el, x, y) { el.style.left = x + 'px'; el.style.top = y + 'px'; }
@@ -1575,7 +1626,7 @@ function renderCards() {
 
   // 2) Pilhas / leques por padrão
   state.nodes.forEach(p => {
-    if (p.kind !== 'pattern' || isCardMuted(p)) return;
+    if (!hostsStack(p) || isCardMuted(p)) return;
     const facts = managedFactsOf(p);
     if (!facts.length) return;
 
@@ -1784,7 +1835,7 @@ function renderStrings() {
   // Linhas decorativas: dimensões → centro (imagem do cérebro)
   const cx0 = 2000, cy0 = 1500;
   state.nodes.forEach(n => {
-    if (n.kind !== 'dimension') return;
+    if (!isAnchorKind(n)) return;
     if (isCardMuted(n)) return;
     const x1 = n.x, y1 = n.y, x2 = cx0, y2 = cy0;
     const mx = (x1+x2)/2, my = (y1+y2)/2;
@@ -1878,7 +1929,7 @@ function renderStrings() {
 
   // Conectores do leque aberto: padrão → cada episódio
   state.nodes.forEach(p => {
-    if (p.kind !== 'pattern' || isCardMuted(p)) return;
+    if (!hostsStack(p) || isCardMuted(p)) return;
     if (!view.expandedStacks.has(p.id)) return;
     const facts = managedFactsOf(p);
     facts.forEach((f, i) => {
@@ -2050,8 +2101,10 @@ modalBackdrop.addEventListener('click', e => { if (e.target === modalBackdrop) c
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
 function renderModalView(n) {
-  if (n.kind === 'fact') return renderFactModalView(n);
-  if (n.kind === 'dimension') return renderDimensionModalView(n);
+  return nodeType(n).renderView(n);
+}
+
+function renderPatternModalView(n) {
   const d = dimById(n.dimension);
 
   // Resumo (descrição em destaque)
@@ -2271,8 +2324,10 @@ function createBlankFact(opts = {}) {
 
 function renderModalEdit(n) {
   if (view.mode === 'read') return renderModalView(n); // leitura: editor bloqueado
-  if (n.kind === 'fact') return renderFactEdit(n);
-  if (n.kind === 'dimension') return renderDimensionEdit(n);
+  return nodeType(n).renderEdit(n);
+}
+
+function renderPatternEdit(n) {
   const isNew = !nodeById(n.id);
   const linkedDims = new Set(dimensionsOf(n.id));
   if (n.dimension && !linkedDims.size) linkedDims.add(n.dimension); // fallback legado
@@ -2979,7 +3034,7 @@ const timelineDimSel = document.getElementById('timelineDim');
 // Popula o seletor de categoria com as dimensões em uso pelos episódios.
 function populateTimelineDimSelect() {
   const used = new Set();
-  state.nodes.filter(n => n.kind === 'fact' && n.dimension).forEach(n => used.add(n.dimension));
+  state.nodes.filter(n => isDatedKind(n) && n.dimension).forEach(n => used.add(n.dimension));
   const current = view.timelineDim || '';
   let opts = '<option value="">Todas</option>';
   DIMENSIONS.filter(d => used.has(d.id)).forEach(d => {
@@ -3025,7 +3080,7 @@ function renderTimeline() {
   if (filter === 'week') cutoff = new Date(now.getTime() - 7*24*3600*1000);
   else if (filter === 'month') cutoff = new Date(now.getTime() - 30*24*3600*1000);
 
-  const facts = state.nodes.filter(n => n.kind === 'fact');
+  const facts = state.nodes.filter(n => isDatedKind(n));
   const withDates = facts.map(f => ({ f, d: parseDateStr(f.fact?.date) || new Date(0) }))
     .filter(x => !cutoff || x.d >= cutoff)
     .filter(x => !dimFilter || x.f.dimension === dimFilter)
