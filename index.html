@@ -326,6 +326,85 @@ html, body {
 .card.fact .divider { display: none; }
 .card.fact .hint { font-size: 9px; color: var(--text-faint); margin-top: 8px; }
 
+/* ===== Pilha / leque de episódios ===== */
+.fact-stack {
+  position: absolute;
+  transform: translate(-50%, 0);
+  cursor: pointer;
+  z-index: 5;
+  transition: transform 0.12s;
+}
+.fact-stack:hover { transform: translate(-50%, -2px); }
+.fact-stack .fs-face {
+  position: relative;
+  display: inline-flex; align-items: center;
+  font-family: var(--font-sans); font-size: 11px; font-weight: 500;
+  color: var(--text-dim);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 2px solid color-mix(in srgb, #d8a05a 55%, transparent);
+  border-radius: 8px;
+  padding: 8px 14px;
+  box-shadow: var(--shadow-2);
+  white-space: nowrap;
+}
+.fact-stack:hover .fs-face { color: var(--text); border-color: var(--line-strong); }
+/* camadas "atrás" pra dar volume de pilha */
+.fact-stack .fs-layer {
+  position: absolute;
+  left: 0; right: 0; top: 0; height: 100%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.fact-stack .fs-l1 { transform: translate(3px, 3px); opacity: 0.72; }
+.fact-stack .fs-l2 { transform: translate(6px, 6px); opacity: 0.52; }
+.fact-stack .fs-l3 { transform: translate(9px, 9px); opacity: 0.36; }
+.fact-stack .fs-l4 { transform: translate(12px, 12px); opacity: 0.24; }
+
+/* destaque de volume: muitos episódios → número em acento âmbar */
+.fact-stack.tier-some .fs-face { color: var(--text); }
+.fact-stack.tier-many .fs-face {
+  color: #e0b070; font-weight: 600;
+  border-left-color: #d8a05a;
+}
+
+/* botão de fechar o leque */
+.fact-stack.fs-close .fs-face {
+  border-left-color: var(--line-strong);
+  color: var(--text-faint);
+}
+.fact-stack.fs-close:hover .fs-face { color: var(--text); }
+
+/* badge de volume no card do padrão */
+.ep-badge {
+  position: absolute;
+  top: -9px; right: -9px;
+  min-width: 20px; height: 20px;
+  padding: 0 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--font-sans); font-size: 11px; font-weight: 600;
+  border-radius: 100px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-3);
+  color: var(--text-faint);
+  box-shadow: var(--shadow-1);
+}
+.ep-badge.tier-some { color: var(--text-dim); }
+.ep-badge.tier-many {
+  color: #1a1208; background: #d8a05a; border-color: #d8a05a;
+}
+
+/* episódio aberto no leque */
+.card.fanned {
+  z-index: 40;
+  animation: fan-in 0.16s ease-out;
+}
+@keyframes fan-in {
+  from { opacity: 0; transform: translate(-50%, -56%) scale(0.96); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
 /* ===== Pins / Tape — desativados no tema minimalista ===== */
 .pin, .tape { display: none !important; }
 .pin-legacy {
@@ -978,7 +1057,7 @@ body.read-mode #saveLabel {
     <span id="modeBadge">👁 leitura</span>
 
     <div class="group-label">Registrar</div>
-    <button id="btnNewFact">📌 Episódio <small style="color:var(--text-faint);float:right">N</small></button>
+    <button id="btnNewFact">+ Novo episódio <small style="color:var(--text-faint);float:right">N</small></button>
     <button id="btnNew">+ Novo padrão</button>
     <button id="btnConnect">🔗 Conectar cards</button>
 
@@ -1239,6 +1318,7 @@ const view = {
   connectSource: null,
   mutedDimensions: new Set(),
   filterDimension: null, // id da dimensão filtrada (mostra só ela); null = sem filtro
+  expandedStacks: new Set(), // ids de padrões com o leque de episódios aberto
   selectedCard: null,
   mode: 'edit', // 'edit' | 'read' — definido no gate de login
 };
@@ -1439,35 +1519,99 @@ function deleteDimension(d) {
   showBanner('Dimensão excluída');
 }
 
+// ----- Pilha / leque de episódios -----------------------------------------
+// Um fato ligado a QUALQUER padrão é "gerenciado": some como card solto e passa
+// a viver na pilha de CADA padrão ligado (pode repetir se vários leques abrirem).
+// Fatos sem padrão (só ligados a dimensão) seguem como cards livres.
+function isManagedFact(fact) {
+  return !!fact && fact.kind === 'fact' &&
+    patternsLinkedTo(fact.id).some(p => p.kind === 'pattern');
+}
+function managedFactsOf(pattern) {
+  return factsLinkedTo(pattern.id)
+    .filter(f => !isCardMuted(f))
+    .sort((a, b) => String((b.fact||{}).date||'').localeCompare(String((a.fact||{}).date||'')) || a.id.localeCompare(b.id));
+}
+// Posição de cada episódio no leque, em arco abaixo do padrão.
+// O raio é derivado de uma distância mínima entre cartas (corda do arco),
+// então elas nunca se sobrepõem, independente da quantidade.
+const FAN_MIN_SEP = 250;   // px entre centros de cartas vizinhas
+function fanPosition(pattern, i, count) {
+  if (count === 1) return { x: pattern.x, y: pattern.y + 240 };
+  const spreadDeg = Math.min(170, count * 32);          // abertura total do leque
+  const stepRad = (spreadDeg / (count - 1)) * Math.PI / 180;
+  // corda = 2R·sin(step/2) ≥ FAN_MIN_SEP  →  R garante o espaçamento
+  const R = Math.min(900, Math.max(240, FAN_MIN_SEP / (2 * Math.sin(stepRad / 2))));
+  const startRad = (90 - spreadDeg / 2) * Math.PI / 180;
+  const ang = startRad + stepRad * i;
+  return { x: pattern.x + R * Math.cos(ang), y: pattern.y + R * Math.sin(ang) };
+}
+
+function makeCard(n) {
+  const el = document.createElement('div');
+  el.className = 'card' + (n.type ? ' ' + n.type : '') + (n.kind === 'fact' ? ' fact' : '');
+  if (view.selectedCard === n.id) el.classList.add('selected');
+  if (view.connectSource === n.id) el.classList.add('connect-source');
+  el.dataset.id = n.id;
+  el.style.transform = `translate(-50%, -50%)`;
+  if (n.kind === 'fact') renderFactCardContent(el, n);
+  else if (n.kind === 'dimension') renderDimensionCardContent(el, n);
+  else renderPatternCardContent(el, n);
+  return el;
+}
+function placeCard(el, x, y) { el.style.left = x + 'px'; el.style.top = y + 'px'; }
+
 function renderCards() {
   cardsEl.innerHTML = '';
+
+  // 1) Cards normais: dimensões, padrões e fatos SEM padrão-âncora (livres)
   state.nodes.forEach(n => {
     if (isCardMuted(n)) return;
-    const el = document.createElement('div');
-    el.className = 'card' + (n.type ? ' ' + n.type : '') + (n.kind === 'fact' ? ' fact' : '');
-    if (view.selectedCard === n.id) el.classList.add('selected');
-    if (view.connectSource === n.id) el.classList.add('connect-source');
-    el.dataset.id = n.id;
-    el.style.left = n.x + 'px';
-    el.style.top = n.y + 'px';
-    el.style.transform = `translate(-50%, -50%)`;
-
-    if (n.pin === 'pin') {
-      const pin = document.createElement('div'); pin.className = 'pin'; el.appendChild(pin);
-    } else if (n.pin && n.pin.startsWith('tape-')) {
-      const pos = n.pin.split('-')[1];
-      const tape = document.createElement('div'); tape.className = 'tape ' + pos; el.appendChild(tape);
-    }
-
-    if (n.kind === 'fact') {
-      renderFactCardContent(el, n);
-    } else if (n.kind === 'dimension') {
-      renderDimensionCardContent(el, n);
-    } else {
-      renderPatternCardContent(el, n);
-    }
-
+    if (isManagedFact(n)) return; // gerenciado pela(s) pilha(s)
+    const el = makeCard(n);
+    placeCard(el, n.x, n.y);
     cardsEl.appendChild(el);
+  });
+
+  // 2) Pilhas / leques por padrão
+  state.nodes.forEach(p => {
+    if (p.kind !== 'pattern' || isCardMuted(p)) return;
+    const facts = managedFactsOf(p);
+    if (!facts.length) return;
+
+    if (view.expandedStacks.has(p.id)) {
+      // leque aberto: cada episódio em arco, clicável (sem arrastar)
+      facts.forEach((f, i) => {
+        const el = makeCard(f);
+        el.classList.add('fanned');
+        const pos = fanPosition(p, i, facts.length);
+        placeCard(el, pos.x, pos.y);
+        cardsEl.appendChild(el);
+      });
+      // botão de fechar o leque (no lugar da pilha)
+      const close = document.createElement('div');
+      close.className = 'fact-stack fs-close';
+      close.dataset.close = p.id;
+      close.style.left = p.x + 'px';
+      close.style.top = (p.y + 90) + 'px';
+      close.innerHTML = `<span class="fs-face">✕ fechar</span>`;
+      cardsEl.appendChild(close);
+    } else {
+      // pilha fechada: peça compacta ancorada abaixo do padrão.
+      // Quanto mais episódios, mais "grossa" a pilha (até 5 camadas) e o número
+      // ganha destaque quando há muitos.
+      const stack = document.createElement('div');
+      const tier = facts.length >= 6 ? 'many' : facts.length >= 3 ? 'some' : 'few';
+      stack.className = 'fact-stack tier-' + tier;
+      stack.dataset.stack = p.id;
+      stack.style.left = p.x + 'px';
+      stack.style.top = (p.y + 90) + 'px';
+      const layers = Math.min(5, facts.length);
+      stack.innerHTML =
+        Array.from({ length: layers - 1 }, (_, k) => `<span class="fs-layer fs-l${k+1}"></span>`).join('') +
+        `<span class="fs-face">${facts.length} episódio${facts.length > 1 ? 's' : ''}</span>`;
+      cardsEl.appendChild(stack);
+    }
   });
 }
 
@@ -1512,6 +1656,17 @@ function dimensionsOf(patternId) {
 }
 
 function renderPatternCardContent(el, n) {
+  // Badge de volume de episódios (canto superior direito); mais forte = mais episódios
+  const epCount = factsLinkedTo(n.id).length;
+  if (epCount) {
+    const tier = epCount >= 6 ? 'many' : epCount >= 3 ? 'some' : 'few';
+    const badge = document.createElement('span');
+    badge.className = 'ep-badge tier-' + tier;
+    badge.textContent = epCount;
+    badge.title = epCount + ' episódio' + (epCount > 1 ? 's' : '');
+    el.appendChild(badge);
+  }
+
   const h = document.createElement('h3');
   h.textContent = n.title;
   el.appendChild(h);
@@ -1553,7 +1708,7 @@ function renderPatternCardContent(el, n) {
   const hint = document.createElement('div'); hint.className='hint';
   const parts = [];
   if (obs.length > preview.length) parts.push(`+ ${obs.length - preview.length} obs`);
-  if (linkedFacts.length) parts.push(`📌 ${linkedFacts.length} episódio${linkedFacts.length>1?'s':''}`);
+  if (linkedFacts.length) parts.push(`${linkedFacts.length} episódio${linkedFacts.length>1?'s':''}`);
   hint.textContent = parts.length ? parts.join(' · ') + ' — clique' : 'clique para detalhes';
   el.appendChild(hint);
 }
@@ -1658,6 +1813,8 @@ function renderStrings() {
     const na = nodeById(c.from), nb = nodeById(c.to);
     if (!na || !nb) return;
     if (isCardMuted(na) || isCardMuted(nb)) return;
+    // Fatos gerenciados por pilha não desenham linha aqui (a pilha/leque cuida)
+    if (isManagedFact(na) || isManagedFact(nb)) return;
     const x1=na.x, y1=na.y, x2=nb.x, y2=nb.y;
     const mx=(x1+x2)/2, my=(y1+y2)/2;
     const dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy);
@@ -1718,6 +1875,23 @@ function renderStrings() {
     });
     stringsGroup.appendChild(hit);
   });
+
+  // Conectores do leque aberto: padrão → cada episódio
+  state.nodes.forEach(p => {
+    if (p.kind !== 'pattern' || isCardMuted(p)) return;
+    if (!view.expandedStacks.has(p.id)) return;
+    const facts = managedFactsOf(p);
+    facts.forEach((f, i) => {
+      const pos = fanPosition(p, i, facts.length);
+      const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d', `M ${p.x} ${p.y} L ${pos.x} ${pos.y}`);
+      path.setAttribute('stroke', 'rgba(216,160,90,0.5)');
+      path.setAttribute('stroke-width', '1.2');
+      path.setAttribute('fill','none');
+      path.setAttribute('stroke-linecap','round');
+      stringsGroup.appendChild(path);
+    });
+  });
 }
 
 // ============================================================
@@ -1734,17 +1908,29 @@ viewport.addEventListener('touchstart', onPointerDown, { passive: false });
 function onPointerDown(e) {
   if (e.target.closest('.sidebar, .dim-reopen, .legend, .modal-backdrop')) return;
   const pos = getEventPos(e);
+
+  // Pilha de episódios: abre/fecha o leque (não arrasta nem dá pan)
+  const stackEl = e.target.closest('.fact-stack');
+  if (stackEl) {
+    if (stackEl.dataset.close) view.expandedStacks.delete(stackEl.dataset.close);
+    else view.expandedStacks.add(stackEl.dataset.stack);
+    refreshDimViews();
+    e.preventDefault();
+    return;
+  }
+
   const cardEl = e.target.closest('.card');
   if (cardEl) {
     const id = cardEl.dataset.id;
     const node = nodeById(id);
+    const locked = cardEl.classList.contains('fanned'); // episódio no leque: só clica
     view.dragging = {
-      type:'card', id,
+      type:'card', id, locked,
       startX: pos.x, startY: pos.y,
       startNodeX: node.x, startNodeY: node.y,
       moved: false
     };
-    cardEl.classList.add('dragging');
+    if (!locked) cardEl.classList.add('dragging');
     e.preventDefault();
   } else {
     view.dragging = {
@@ -1761,6 +1947,7 @@ window.addEventListener('mousemove', onPointerMove);
 window.addEventListener('touchmove', onPointerMove, { passive: false });
 function onPointerMove(e) {
   if (!view.dragging) return;
+  if (view.dragging.type === 'card' && view.dragging.locked) return; // episódio no leque não move
   const pos = getEventPos(e);
   const dx = pos.x - view.dragging.startX, dy = pos.y - view.dragging.startY;
   if (Math.abs(dx) > 4 || Math.abs(dy) > 4) view.dragging.moved = true;
@@ -1789,9 +1976,11 @@ function onPointerUp(e) {
     const el = cardsEl.querySelector(`.card[data-id="${view.dragging.id}"]`);
     if (el) el.classList.remove('dragging');
     if (!moved) handleCardClick(view.dragging.id);
-    else saveState();
+    else { saveState(); renderCards(); renderStrings(); } // re-encaixa pilhas/leques na nova posição
   } else if (view.dragging.type === 'pan') {
     viewport.classList.remove('grabbing');
+    // clique no fundo (sem arrastar) recolhe os leques abertos
+    if (!moved && view.expandedStacks.size) { view.expandedStacks.clear(); renderCards(); renderStrings(); }
   }
   view.dragging = null;
 }
@@ -1928,7 +2117,7 @@ function renderModalView(n) {
     ${factsHtml}
     <div class="modal-actions">
       ${view.mode === 'edit' ? `<button id="btnEdit">✏ Editar</button>
-      <button id="btnAddFact">📌 Novo episódio ligado</button>` : ''}
+      <button id="btnAddFact">+ Novo episódio ligado</button>` : ''}
       <button id="btnConnectFrom">🔗 Conectar a outro</button>
       ${view.mode === 'edit' ? `<button id="btnDelete" class="danger">🗑 Apagar card</button>` : ''}
     </div>
@@ -2294,7 +2483,7 @@ function renderFactEdit(n) {
   if (n._linkTo) linkedIds.add(n._linkTo);
 
   modalContent.innerHTML = `
-    <h2>${isNew ? '📌 Novo episódio' : '📌 Editar episódio'}</h2>
+    <h2>${isNew ? 'Novo episódio' : 'Editar episódio'}</h2>
     <div class="modal-subtitle">Registre uma situação concreta — quanto mais específico, melhor.</div>
     <div class="form-group">
       <label>Título curto</label>
