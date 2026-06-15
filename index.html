@@ -362,23 +362,39 @@ html, body {
 .tape.bl { bottom: -10px; left: -14px; transform: rotate(28deg); }
 .tape.br { bottom: -10px; right: -14px; transform: rotate(-30deg); }
 
-/* ===== Toolbar ===== */
-.toolbar {
+/* ===== Sidebar unificada (ações + dimensões) ===== */
+.sidebar {
   position: fixed;
-  top: 16px;
-  right: 16px;
+  top: 0; left: 0; bottom: 0;
+  width: 222px;
   z-index: 200;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  background: color-mix(in srgb, var(--bg-2) 92%, transparent);
   backdrop-filter: blur(10px);
-  padding: 10px;
-  border-radius: var(--radius);
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow-2);
+  border-right: 1px solid var(--line);
+  font-family: var(--font-sans);
+  color: var(--text-dim);
+  overflow: hidden;            /* cabeçalho fixo; corpo rola */
 }
-.toolbar button {
+.sidebar-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px;
+  padding: 14px 14px 12px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.sidebar-brand {
+  font-family: var(--font-serif); font-weight: 600;
+  font-size: 15px; color: var(--text); letter-spacing: 0.2px;
+}
+.sidebar-body {
+  flex: 1; overflow-y: auto;
+  padding: 10px 12px 28px;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.sidebar #modeBadge { margin-bottom: 8px; }
+.sidebar button {
   background: transparent;
   color: var(--text-dim);
   border: 1px solid transparent;
@@ -390,47 +406,25 @@ html, body {
   text-align: left;
   transition: background 0.15s, color 0.15s;
 }
-.toolbar button:hover { background: var(--surface-3); color: var(--text); }
-.toolbar button.active { background: var(--accent-dim); color: var(--accent); border-color: transparent; }
-.toolbar button:disabled { opacity: 0.3; cursor: not-allowed; }
-.toolbar .sep { height: 1px; background: var(--line); margin: 5px 2px; }
-.toolbar .group-label { font-size: 9px; color: var(--text-faint); letter-spacing: 1.5px; text-transform: uppercase; padding: 4px 4px 2px; }
-.toolbar button.primary {
+.sidebar button:hover { background: var(--surface-3); color: var(--text); }
+.sidebar button.active { background: var(--accent-dim); color: var(--accent); border-color: transparent; }
+.sidebar button:disabled { opacity: 0.3; cursor: not-allowed; }
+.sidebar button.primary {
   background: var(--accent-dim); color: var(--accent); border-color: transparent;
   font-weight: 600;
 }
-.toolbar button.primary:hover { background: color-mix(in srgb, var(--accent) 26%, transparent); }
-.toolbar .toolbar-note {
-  font-size: 9px; line-height: 1.4; color: var(--text-faint);
-  padding: 2px 4px 0; max-width: 200px;
-}
-.toolbar .toolbar-note b { color: var(--text-dim); }
+.sidebar button.primary:hover { background: color-mix(in srgb, var(--accent) 26%, transparent); }
+.sidebar .sep { height: 1px; background: var(--line); margin: 8px 2px; }
+.sidebar .group-label { font-size: 9px; color: var(--text-faint); letter-spacing: 1.5px; text-transform: uppercase; padding: 8px 4px 4px; }
 
-/* ===== Painel lateral de Dimensões ===== */
-.dim-panel {
-  position: fixed;
-  top: 0; left: 0; bottom: 0;
-  width: 200px;
-  z-index: 150;
-  background: color-mix(in srgb, var(--bg-2) 90%, transparent);
-  backdrop-filter: blur(10px);
-  border-right: 1px solid var(--line);
-  padding: 16px 12px;
-  overflow-y: auto;
-  font-family: var(--font-sans);
-  font-size: 12px;
-  color: var(--text-dim);
-}
-.dim-panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.dim-panel-head h4 { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-faint); margin: 0; font-weight: 600; }
 .dim-collapse {
   background: transparent; border: none; color: var(--text-faint);
-  font-size: 16px; cursor: pointer; line-height: 1; padding: 0 4px;
+  font-size: 18px; cursor: pointer; line-height: 1; padding: 0 4px;
 }
 .dim-collapse:hover { color: var(--text); }
 /* botão de reabrir (quando colapsado) */
 .dim-reopen {
-  position: fixed; top: 16px; left: 16px; z-index: 150;
+  position: fixed; top: 16px; left: 16px; z-index: 200;
   display: none;
   background: color-mix(in srgb, var(--surface) 86%, transparent); color: var(--text-dim);
   backdrop-filter: blur(10px);
@@ -438,7 +432,7 @@ html, body {
   font-size: 16px; cursor: pointer; padding: 6px 10px;
 }
 .dim-reopen:hover { color: var(--text); }
-body.dim-collapsed .dim-panel { display: none; }
+body.dim-collapsed .sidebar { display: none; }
 body.dim-collapsed .dim-reopen { display: block; }
 
 .dim-row {
@@ -855,7 +849,7 @@ body.read-mode .dim-row.add-row { display: none !important; }
   body { background: white; }
   .viewport { position: static; height: auto; background: #f5ead0; overflow: visible; }
   .viewport::before { display: none; }
-  .toolbar, .dim-panel, .dim-reopen, .zoom-indicator, .banner, .modal-backdrop, .timeline-view { display: none !important; }
+  .sidebar, .dim-reopen, .zoom-indicator, .banner, .modal-backdrop, .timeline-view { display: none !important; }
   .board { transform: none !important; position: relative; }
 }
 
@@ -927,7 +921,6 @@ body.read-mode #btnNew,
 body.read-mode #btnExport,
 body.read-mode #btnImport,
 body.read-mode #btnPublish,
-body.read-mode .toolbar-note,
 body.read-mode #saveSep,
 body.read-mode #saveLabel {
   display: none !important;
@@ -976,33 +969,37 @@ body.read-mode #saveLabel {
 </div>
 
 
-<aside class="dim-panel" id="dimPanel">
-  <div class="dim-panel-head">
-    <h4>Dimensões</h4>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-head">
+    <span class="sidebar-brand">Mappa Mentis</span>
     <button class="dim-collapse" id="dimCollapse" title="Recolher">«</button>
   </div>
-  <div id="legendList"></div>
-</aside>
-<button class="dim-reopen" id="dimReopen" title="Dimensões">☰</button>
+  <div class="sidebar-body">
+    <span id="modeBadge">👁 leitura</span>
 
-<div class="toolbar">
-  <span id="modeBadge">👁 leitura</span>
-  <div class="sep"></div>
-  <div class="group-label">Registrar</div>
-  <button id="btnNewFact">📌 Episódio <small style="color:#8aa;float:right">N</small></button>
-  <button id="btnNew">+ Novo padrão</button>
-  <button id="btnConnect">🔗 Conectar cards</button>
-  <div class="sep"></div>
-  <div class="group-label">Visualizar</div>
-  <button id="btnTimeline">📅 Linha do tempo</button>
-  <button id="btnRecenter">⊙ Recentralizar</button>
-  <div class="sep" id="saveSep"></div>
-  <div class="group-label" id="saveLabel">Salvar</div>
-  <button id="btnPublish" class="primary">☁ Salvar</button>
-  <button id="btnExport">⬆ Exportar cópia (.json)</button>
-  <button id="btnImport">⬇ Importar (.json)</button>
-  <input type="file" id="fileInput" accept="application/json" style="display:none">
-</div>
+    <div class="group-label">Registrar</div>
+    <button id="btnNewFact">📌 Episódio <small style="color:var(--text-faint);float:right">N</small></button>
+    <button id="btnNew">+ Novo padrão</button>
+    <button id="btnConnect">🔗 Conectar cards</button>
+
+    <div class="sep"></div>
+    <div class="group-label">Visualizar</div>
+    <button id="btnTimeline">📅 Linha do tempo</button>
+    <button id="btnRecenter">⊙ Recentralizar</button>
+
+    <div class="sep" id="saveSep"></div>
+    <div class="group-label" id="saveLabel">Salvar</div>
+    <button id="btnPublish" class="primary">☁ Salvar</button>
+    <button id="btnExport">⬆ Exportar cópia (.json)</button>
+    <button id="btnImport">⬇ Importar (.json)</button>
+    <input type="file" id="fileInput" accept="application/json" style="display:none">
+
+    <div class="sep"></div>
+    <div class="group-label">Dimensões</div>
+    <div id="legendList"></div>
+  </div>
+</aside>
+<button class="dim-reopen" id="dimReopen" title="Menu">☰</button>
 
 <div class="viewport" id="viewport">
   <div class="board" id="board">
@@ -1735,7 +1732,7 @@ viewport.addEventListener('mousedown', onPointerDown);
 viewport.addEventListener('touchstart', onPointerDown, { passive: false });
 
 function onPointerDown(e) {
-  if (e.target.closest('.toolbar, .legend, .modal-backdrop')) return;
+  if (e.target.closest('.sidebar, .dim-reopen, .legend, .modal-backdrop')) return;
   const pos = getEventPos(e);
   const cardEl = e.target.closest('.card');
   if (cardEl) {
