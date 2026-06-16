@@ -1,3 +1,6 @@
 # Dados em TEXTO PURO — NUNCA versionar (repositório é público).
 # Ignora qualquer .json; só o mapa-mental.json.enc (cifrado) vai para o GitHub.
 *.json
+
+# Certificados do servidor HTTPS local — NUNCA versionar (chave privada).
+*.pem
