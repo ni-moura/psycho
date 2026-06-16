@@ -390,6 +390,32 @@ html, body {
 }
 .int-item-edit .ii-del:hover { color: var(--accent); border-color: var(--accent); }
 
+/* ===== Card de Sonho ===== */
+.card.dream {
+  width: 220px;
+  border-left: 2px solid #7c9fe0;
+}
+.card.dream h3 { font-size: 16px; }
+.card .dream-tag {
+  display: inline-block;
+  font-family: var(--font-sans);
+  font-size: 9px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 1.5px;
+  color: #a9c4ec; background: rgba(124,159,224,0.16);
+  padding: 2px 9px; border-radius: 100px;
+  margin-bottom: 8px;
+}
+.card .dream-desc { font-size: 12px; color: var(--text-dim); line-height: 1.5; margin: 6px 0; }
+.card .dream-date { font-size: 10px; color: var(--text-faint); margin-top: 4px; }
+.dream-realized {
+  display: inline-block;
+  font-family: var(--font-sans);
+  font-size: 9px; text-transform: uppercase; letter-spacing: 1px;
+  padding: 2px 9px; border-radius: 100px;
+  margin: 4px 0 2px;
+  color: #8fd0a6; border: 1px solid rgba(127,200,154,0.35);
+}
+
 /* ===== Pilha / leque de episódios ===== */
 .fact-stack {
   position: absolute;
@@ -1117,6 +1143,7 @@ body:not(.read-mode):not(.locked) #modeBadge:hover { background: rgba(216,160,90
 body.read-mode #btnNewFact,
 body.read-mode #btnNew,
 body.read-mode #btnNewInterest,
+body.read-mode #btnNewSonho,
 body.read-mode #btnExport,
 body.read-mode #btnImport,
 body.read-mode #btnPublish,
@@ -1186,6 +1213,7 @@ body.read-mode #saveLabel {
     <button id="btnNewFact">+ Novo episódio <small style="color:var(--text-faint);float:right">N</small></button>
     <button id="btnNew">+ Novo padrão</button>
     <button id="btnNewInterest">+ Novo interesse</button>
+    <button id="btnNewSonho">+ Novo sonho</button>
     <button id="btnConnect">🔗 Conectar cards</button>
 
     <div class="sep"></div>
@@ -1740,6 +1768,28 @@ const NODE_TYPES = {
     managed: false,
     dated: false,        // só registro; fora da timeline por enquanto
     centerHosted: true,  // vive no hub (cérebro), não na lousa
+  },
+  dream: {
+    kind: 'dream',
+    idBase: 'dream',
+    cardClass: 'dream',
+    label: 'sonho',
+    tabLabel: 'Sonhos',
+    accent: '#7c9fe0',
+    renderCard: renderDreamCardContent,
+    renderView: renderDreamModalView,
+    renderEdit: renderDreamEdit,
+    makeBlank: createBlankDream,
+    hubMeta: (n) => {
+      const d = n.dream || {};
+      return [d.realized ? 'realizado' : 'sonhando', d.createdAt ? 'criado ' + d.createdAt : '']
+        .filter(Boolean).map(escapeHtml).join(' · ');
+    },
+    isAnchor: false,
+    hostsStack: false,
+    managed: false,
+    dated: false,        // a data é a de criação, não entra na timeline
+    centerHosted: true,  // vive no hub (cérebro), junto dos interesses
   },
 };
 const DEFAULT_KIND = 'pattern';
@@ -2552,6 +2602,23 @@ function createBlankInterest() {
   };
 }
 
+function createBlankDream() {
+  const center = {
+    x: (window.innerWidth/2 - view.pan.x) / view.zoom,
+    y: (window.innerHeight/2 - view.pan.y) / view.zoom
+  };
+  return {
+    id: uniqueId('dream'),
+    kind: 'dream',
+    title: 'Novo sonho',
+    x: center.x + (Math.random()*200 - 100),
+    y: center.y + (Math.random()*200 - 100),
+    rotation: Math.random()*8 - 4,
+    // a data de criação é gravada agora e nunca regravada ao editar
+    dream: { description: '', realized: false, createdAt: new Date().toISOString().slice(0, 10) }
+  };
+}
+
 function renderModalEdit(n) {
   if (view.mode === 'read') return renderModalView(n); // leitura: editor bloqueado
   return nodeType(n).renderEdit(n);
@@ -3067,6 +3134,127 @@ function renderInterestEdit(n) {
   };
 }
 
+// ===== SONHO (card livre de registro, com data de criação) ================
+function renderDreamCardContent(el, n) {
+  const d = n.dream || {};
+  const tag = document.createElement('span');
+  tag.className = 'dream-tag';
+  tag.textContent = 'sonho';
+  el.appendChild(tag);
+
+  const h = document.createElement('h3');
+  h.textContent = n.title;
+  el.appendChild(h);
+
+  if (d.realized) {
+    const r = document.createElement('span');
+    r.className = 'dream-realized';
+    r.textContent = '✓ realizado';
+    el.appendChild(r);
+  }
+  if (d.description) {
+    const t = document.createElement('div');
+    t.className = 'dream-desc';
+    t.textContent = d.description.length > 110 ? d.description.slice(0, 107) + '…' : d.description;
+    el.appendChild(t);
+  }
+  if (d.createdAt) {
+    const sc = document.createElement('div');
+    sc.className = 'dream-date';
+    sc.textContent = 'criado em ' + d.createdAt;
+    el.appendChild(sc);
+  }
+  const hint = document.createElement('div');
+  hint.className = 'hint';
+  hint.textContent = 'sonho — clique para detalhes';
+  el.appendChild(hint);
+}
+
+function renderDreamModalView(n) {
+  const d = n.dream || {};
+  const meta = ['sonho', d.realized ? 'realizado' : 'sonhando'];
+  if (d.createdAt) meta.push('criado em ' + escapeHtml(d.createdAt));
+  modalContent.innerHTML = `
+    <h2>${escapeHtml(n.title)}</h2>
+    <div class="modal-subtitle">${meta.join(' · ')}</div>
+    ${d.description
+        ? `<div class="pattern-summary">${escapeHtml(d.description)}</div>`
+        : '<p style="color:var(--text-faint);font-style:italic">Sem descrição ainda — clique em Editar.</p>'}
+    ${view.mode === 'edit' ? `
+      <label class="dream-toggle" style="display:flex;align-items:center;gap:8px;margin:14px 0 2px;cursor:pointer;color:var(--text-dim);font-size:13px">
+        <input type="checkbox" id="d-realized-view" ${d.realized ? 'checked' : ''} style="width:16px;height:16px;accent-color:#7fc89a;cursor:pointer">
+        Sonho realizado
+      </label>` : ''}
+    <div class="modal-actions">
+      <button id="btnHub">← Sonhos</button>
+      ${view.mode === 'edit' ? `<button id="btnEdit">✏ Editar</button>` : ''}
+      ${view.mode === 'edit' ? `<button id="btnDelete" class="danger">🗑 Apagar sonho</button>` : ''}
+    </div>
+  `;
+  // toggle de realizado direto na visualização (só no modo edição)
+  const rv = document.getElementById('d-realized-view');
+  if (rv) rv.onchange = () => {
+    n.dream.realized = rv.checked;
+    saveState();
+    renderCards();
+    renderDreamModalView(n);
+  };
+  document.getElementById('btnHub').onclick = () => openHubModal('dream');
+  const btnEdit = document.getElementById('btnEdit');
+  if (btnEdit) btnEdit.onclick = () => renderModalEdit(n);
+  const btnDelete = document.getElementById('btnDelete');
+  if (btnDelete) btnDelete.onclick = () => deleteNode(n.id);
+}
+
+function renderDreamEdit(n) {
+  if (view.mode === 'read') return renderModalView(n);
+  const isNew = !nodeById(n.id);
+  const d = n.dream || (n.dream = { description: '', realized: false, createdAt: new Date().toISOString().slice(0, 10) });
+  if (!d.createdAt) d.createdAt = new Date().toISOString().slice(0, 10);
+
+  modalContent.innerHTML = `
+    <h2>${isNew ? 'Novo sonho' : 'Editar sonho'}</h2>
+    <div class="modal-subtitle">Sonhos, metas, lugares onde quer chegar — a data é a de hoje.</div>
+    <div class="form-group">
+      <label>Nome</label>
+      <input type="text" id="d-title" value="${escapeHtml(n.title)}" placeholder="Ex: Morar fora, aprender piano, maratona">
+    </div>
+    <div class="form-group">
+      <label>Descrição</label>
+      <textarea id="d-desc" rows="3" placeholder="O que é esse sonho, por que importa, como seria realizá-lo...">${escapeHtml(d.description||'')}</textarea>
+    </div>
+    <div class="form-group">
+      <label class="dream-toggle" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="d-realized" ${d.realized ? 'checked' : ''} style="width:16px;height:16px;accent-color:#7fc89a;cursor:pointer">
+        Sonho realizado
+      </label>
+    </div>
+    <div class="modal-subtitle" style="margin:0">Criado em ${escapeHtml(d.createdAt)} (automático)</div>
+    <div class="modal-actions">
+      <button id="btnSaveCard" style="background:var(--accent-dim);color:var(--accent);border-color:var(--accent)">💾 Salvar</button>
+      <button id="btnCancel">Cancelar</button>
+    </div>
+  `;
+  document.getElementById('btnSaveCard').onclick = () => {
+    n.title = document.getElementById('d-title').value.trim() || 'Sonho sem nome';
+    n.dream = {
+      description: document.getElementById('d-desc').value.trim(),
+      realized: document.getElementById('d-realized').checked,
+      createdAt: d.createdAt   // preserva a data de criação original
+    };
+    if (isNew) state.nodes.push(n);
+    saveState();
+    renderCards();
+    renderStrings();
+    renderDreamModalView(n);
+    showBanner('Sonho salvo');
+  };
+  document.getElementById('btnCancel').onclick = () => {
+    if (isNew) closeModal();
+    else renderDreamModalView(nodeById(n.id));
+  };
+}
+
 function deleteNode(id) {
   if (!confirm('Apagar este card e todas as suas conexões?')) return;
   state.nodes = state.nodes.filter(n => n.id !== id);
@@ -3111,6 +3299,12 @@ document.getElementById('btnNewFact').onclick = () => {
 document.getElementById('btnNewInterest').onclick = () => {
   const n = createBlankInterest();
   renderInterestEdit(n);
+  modalBackdrop.classList.add('active');
+};
+
+document.getElementById('btnNewSonho').onclick = () => {
+  const n = createBlankDream();
+  renderDreamEdit(n);
   modalBackdrop.classList.add('active');
 };
 
